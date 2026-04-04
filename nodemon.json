@@ -1,0 +1,8 @@
+{
+    "watch": [
+        "src"
+    ],
+    "ext": "ts",
+    "exec": "vite-node src/main.ts",
+    "legacyWatch": true
+}
