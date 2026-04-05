@@ -26,6 +26,7 @@ export function workspaceMeta(uid:string,wid:string){
 
 export function checkPath(p:string|undefined,noSlashes=false){
     if(!p || p.includes("..")) return;
+    if(p.startsWith("/")) return;
     if(noSlashes) if(p.includes("/")) return;
     return p;
 }

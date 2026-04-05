@@ -45,3 +45,11 @@ export interface WorkspacePermissions{
     view:boolean;
     edit:boolean;
 }
+
+// 
+
+export type Result<T> = [{
+    code:number;
+    msg:string;
+},undefined] | [undefined,T];
+export type CB = (res:Result<any>)=>void;

@@ -1,6 +1,30 @@
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 import { verifyToken } from "../core/tokens";
 import { createSession, deleteSession } from "../core/sessions";
+import { deleteFile, fileExists, readBinary, writeBinary, writeFolder } from "../core/files";
+import { CB } from "../types/core_types";
+
+type WorkspaceOpData = {
+    owner:string;
+    wid:string;
+    path:string;
+    data?:Uint8Array;
+    type?:"file"|"folder";
+};
+function workspaceOp<T>(socket:Socket,id:string,cb2:(data:WorkspaceOpData)=>Promise<T|undefined|void>){
+    socket.on(id,async (body:WorkspaceOpData,cb:CB)=>{
+        try{
+            let res = await cb2(body);
+            cb([undefined,res]);
+        }
+        catch(e:any){
+            cb([{
+                code:400,
+                msg:e.message
+            },undefined]);
+        }
+    });
+}
 
 export function attachSocketIO(httpServer:Express.Application){
     const io = new Server(httpServer,{
@@ -32,9 +56,49 @@ export function attachSocketIO(httpServer:Express.Application){
             deleteSession(socket.id);
         });
 
-        socket.on("test",()=>{
-            console.log("hi",socket.session);
+        // FILES
+        
+        workspaceOp<Uint8Array>(socket,"getFile",async (data)=>{
+            const username = socket.session.username;
+            return await readBinary(data.owner,data.wid,username,data.path);
         });
+        workspaceOp<boolean>(socket,"writeFile",async (data)=>{
+            if(!data.data) return;
+            const username = socket.session.username;
+            await writeBinary(data.owner,data.wid,username,data.path,data.data);
+            return true;
+        });
+        workspaceOp<boolean>(socket,"deleteFile",async (data)=>{
+            const username = socket.session.username;
+            // v-- TODO: hmm maybe we should make this move to a trash instead?
+            await deleteFile(data.owner,data.wid,username,data.path); 
+            // if(data.type == "folder") await deleteFolder(data.owner,data.wid,username,data.path); 
+            // else await deleteFile(data.owner,data.wid,username,data.path); 
+            return true;
+        });
+
+        workspaceOp<boolean>(socket,"writeFolder",async (data)=>{
+            const username = socket.session.username;
+            await writeFolder(data.owner,data.wid,username,data.path); // <-- TODO: hmm maybe we should make this move to a trash instead?
+            return true;
+        });
+        workspaceOp<boolean>(socket,"pathExists",async (data)=>{
+            const username = socket.session.username;
+            await fileExists(data.owner,data.wid,username,data.path);
+            return true;
+        });
+        
+        socket.on("saveFile",async ()=>{
+
+        });
+        socket.on("openFile",async ()=>{
+
+        });
+        socket.on("closeFile",async ()=>{
+
+        });
+
+        // 
     });
 
     return io;
