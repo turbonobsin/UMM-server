@@ -26,7 +26,7 @@ export function attachSocketIO(httpServer:Express.Application){
     });
 
     io.on("connection",socket=>{
-        console.log("connection",socket.id,(socket as any).session);
+        console.log("connection",socket.session.username);
 
         socket.on("disconnect",()=>{
             deleteSession(socket.id);

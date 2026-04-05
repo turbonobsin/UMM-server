@@ -1,4 +1,4 @@
-import { UserData } from "../types/core_types";
+import { UserMeta } from "../types/core_types";
 
 export interface Session{
     sid:string;

@@ -1,6 +1,6 @@
-import { UserData } from "../../types/core_types";
+import { UserMeta } from "../../types/core_types";
 
-export function migrateUser(data:UserData): UserData{
+export function migrateUser(data:UserMeta): UserMeta{
     let v = data.v;
 
     if(v == 0){

@@ -1,17 +1,11 @@
 import { Request, Router } from "express";
 import { createToken } from "../core/tokens";
 import { auth } from "../server/middleware/auth";
-import { createUser, loginUser } from "../core/users";
+import { createUser, loginUser, updateUser } from "../core/users";
 import { getUser } from "../storage/json";
-import { checkPath } from "../storage/paths";
+import { checkPath, valStr } from "../storage/paths";
 
 const router = Router();
-
-function valStr(s:string|string[]|undefined):s is string{
-    if(s == undefined) return false;
-    if(typeof s !== "string") return false;
-    return true;
-}
 
 router.post("/signup",async (req,res)=>{
     const {
@@ -68,6 +62,22 @@ router.get("/me",auth,async (req:Request,res)=>{
     }
     catch(err:any){
         res.status(500).send(err);
+    }
+});
+
+router.patch("/user/update",auth,async (req:Request,res)=>{
+    if(!req.session) return;
+    
+    const username = req.session.username;
+
+    try{
+        const updated = await updateUser(username,req.body); // <-- TODO: could allow putting junk in there
+        res.status(200).send({
+            user:updated
+        });
+    }
+    catch{
+        res.status(400).send("Failed to update user");
     }
 });
 

@@ -1,5 +1,11 @@
-export interface UserData{
+export type IconData = {
+    url?:string;
+    bg?:string;
+};
+
+export interface UserMeta{
     v:number;
+
     username:string;
     displayName:string;
     passwordHash:string;
@@ -7,10 +13,7 @@ export interface UserData{
     lastLogin:number;
     tokens:string[];
 
-    icon:{
-        url?:string;
-        bg?:string;
-    };
+    icon:IconData;
 
     friends:{
         displayName:string;
@@ -18,4 +21,27 @@ export interface UserData{
     }[];
 
     // lastWSId?:string; // <-- probably will be stored by the client
-};
+}
+
+/**
+ * The format of `_umm__ws.json` files
+ */
+export interface WorkspaceMeta{
+    v:number;
+    wid:string;
+    /**
+     * This is the owner's username
+     */
+    owner:string;
+    
+    name:string;
+    icon:IconData;
+
+    createdAt:number;
+    lastOpened:number;
+}
+
+export interface WorkspacePermissions{
+    view:boolean;
+    edit:boolean;
+}

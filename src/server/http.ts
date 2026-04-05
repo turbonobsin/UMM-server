@@ -4,6 +4,7 @@ import { join } from "path";
 import { checkPath, workspaceDir } from "../storage/paths";
 
 import accountRouter from "../routes/accounts";
+import workspaceRouter from "../routes/workspaces";
 
 export function createHTTPServer(){
     const app = express();
@@ -11,6 +12,7 @@ export function createHTTPServer(){
     app.use(express.json());
     app.use(cors());
     app.use(accountRouter);
+    app.use(workspaceRouter);
 
     app.get("/test",(req,res)=>{
         res.sendStatus(200);

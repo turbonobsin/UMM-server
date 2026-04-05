@@ -22,8 +22,25 @@ export function workspaceMeta(uid:string,wid:string){
     return join(workspaceDir(uid,wid),"__umm__ws.json");
 }
 
+// 
+
 export function checkPath(p:string|undefined,noSlashes=false){
     if(!p || p.includes("..")) return;
     if(noSlashes) if(p.includes("/")) return;
     return p;
+}
+
+export function valStr(s:string|string[]|undefined):s is string{
+    if(s == undefined) return false;
+    if(typeof s !== "string") return false;
+    return true;
+}
+
+export function isStr(val:any):val is string{
+    if(typeof val == "string") return true;
+    return false;
+}
+
+export function queryOrDefault(qVal:any,def:string){
+    return isStr(qVal) ? qVal : def;
 }
