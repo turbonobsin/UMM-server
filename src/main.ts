@@ -1,3 +1,3 @@
 import { startServer } from "./server/index";
 
-startServer(3000);
+startServer(+(process.env.port ?? 3000));

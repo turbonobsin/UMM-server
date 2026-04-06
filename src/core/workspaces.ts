@@ -2,9 +2,10 @@ import { genId } from "../storage/ids";
 import { userDir, workspaceDir, workspaceMeta } from "../storage/paths";
 import { IconData, WorkspaceMeta as WorkspaceMeta, WorkspacePermissions } from "../types/core_types";
 import fs from "fs/promises";
-import { userExists } from "./users";
+import { loadUser, userExists } from "./users";
 import { loadJSON, saveJSON } from "../storage/json";
 import { join } from "path";
+import { migrateWorkspace } from "../storage/migrations/workspace";
 
 export async function workspaceExists(username:string,wid:string){
     try{
@@ -49,7 +50,11 @@ export async function createWorkspace(data:Partial<WorkspaceMeta> & {username:st
         icon:data.icon,
         owner:username,
         createdAt:Date.now(),
-        lastOpened:Date.now()
+        lastOpened:Date.now(),
+        perm:{
+            groups:{},
+            users:{}
+        }
     };
 
     await saveJSON(workspaceMeta(username,wid),meta);
@@ -57,6 +62,9 @@ export async function createWorkspace(data:Partial<WorkspaceMeta> & {username:st
 }
 
 export async function listWorkspaces(username:string):Promise<WorkspaceMeta[]>{
+    const user = await loadUser(username);
+    if(!user) return [];
+    
     const userWorkspaces = join(userDir(username),"workspaces");
 
     let dirs:string[];
@@ -79,6 +87,15 @@ export async function listWorkspaces(username:string):Promise<WorkspaceMeta[]>{
         }
     }
 
+    // external
+    for(const w of user.externalWorkspaces){
+        try{
+            const meta = await loadWorkspace(w.owner,w.wid,username); // <-- auto checks for view permission
+            metas.push(meta);
+        }
+        catch{}
+    }
+
     return metas;
 }
 
@@ -88,13 +105,16 @@ export async function loadWorkspace(username:string,wid:string,fromUsername:stri
         if(!perm.view) throw new Error("You don't have the *view* permission for this workspace");
     }
 
-    return loadJSON<WorkspaceMeta>(workspaceMeta(username,wid),async (data,path)=>{
+    return migrateWorkspace(await loadJSON<WorkspaceMeta>(workspaceMeta(username,wid),async (data,path)=>{
         data.lastOpened = Date.now();
+        data.perm ??= {groups:{},users:{}}; // migration stuff here for now
+        data.perm.groups ??= {};
+        data.perm.users ??= {};
         try{
             await saveJSON(path,data);
         }
         catch{}
-    });
+    }));
 }
 
 export async function updateWorkspaceMeta(username:string,wid:string,fromUsername:string|undefined,updates:Partial<WorkspaceMeta>){
@@ -135,8 +155,29 @@ export async function getWorkspacePermissions(ownerUsername:string,wid:string,op
         view:false
     };
 
-    // for now...
+    // public permissions
+    if(ws.perm.public){
+        for(const key in ws.perm.public){
+            const k2 = key as keyof WorkspacePermissions;
+            if(ws.perm.public[k2] === true) perm[k2] = true;
+        }
+    }
 
+    // user group permissions
+    const userItem = ws.perm.users[openerUsername];
+    if(userItem){
+        for(const id of userItem.groups){
+            const group = ws.perm.groups[id];
+            if(!group) continue;
+
+            for(const key in group.perm){
+                const k2 = key as keyof WorkspacePermissions;
+                if(group.perm[k2] === true) perm[k2] = true;
+            }
+        }
+    }
+
+    // owner has all access
     if(ws.owner == openerUsername){
         perm.view = true;
         perm.edit = true;

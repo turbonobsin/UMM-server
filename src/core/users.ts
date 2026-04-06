@@ -34,7 +34,8 @@ export async function createUser(username:string,displayName:string,password:str
         lastLogin:Date.now(),
         friends:[],
         icon:{},
-        tokens:[]
+        tokens:[],
+        externalWorkspaces:[]
     };
 
     await saveJSON(userFile(username),data);

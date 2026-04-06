@@ -5,6 +5,8 @@ import { deleteFile, fileExists, readBinary, writeBinary, writeFolder } from "..
 import { CB } from "../types/core_types";
 import { _getFileMap, registerCloseFile, registerOpenFile, removeSessionFromAllFiles } from "../core/fileRegistry";
 import { prepareRestart } from "./restart";
+import { getUser, saveJSON } from "../storage/json";
+import { loadUser, updateUser } from "../core/users";
 
 type WorkspaceOpData = {
     owner:string;
@@ -133,6 +135,19 @@ export function attachSocketIO(httpServer:Express.Application){
         });
 
         // 
+
+        workspaceOp(socket,"openWorkspace",async (data:WorkspaceOpData)=>{
+            if(data.owner == socket.session.username) return; // <-- already yours
+            const user = await loadUser(socket.session.username);
+            if(user){
+                if(user.externalWorkspaces.some(v=>v.owner == data.owner && v.wid == data.wid)) return; // <-- prevent duplicates
+                user.externalWorkspaces.push({
+                    owner:data.owner,
+                    wid:data.wid
+                });
+                await updateUser(socket.session.username,{});
+            }
+        });
 
         workspaceOp(socket,"file:open",async (data:WorkspaceOpData & {saved?:boolean})=>{
             socket.session.openFiles[data.path] = {

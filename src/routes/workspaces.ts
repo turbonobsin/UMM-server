@@ -62,8 +62,8 @@ router.get("/workspace/:uid/:wid",auth,async (req:Request,res)=>{
         perm = await getWorkspacePermissions(username,wid,req.session.username);
         if(!perm.view) return res.status(403).send("You don't have the *view* permission for this workspace") // TODO: is this 401 or 403?
     }
-    catch{
-        return res.status(400).send("Failed to get workspace permissions");
+    catch(e:any){
+        return res.status(400).send("Failed to get workspace permissions: "+e.message);
     }
     // 
 

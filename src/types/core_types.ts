@@ -29,6 +29,18 @@ export interface UserMeta{
     // lastWSId?:string; // <-- probably will be stored by the client
 }
 
+
+export type WorkspacePermissionConfig = {
+    public?:WorkspacePermissions;
+    groups:Record<string,{
+        perm:WorkspacePermissions;
+    }>;
+    users:Record<string,{
+        groups:string[];
+    }>;
+};
+
+
 /**
  * The format of `_umm__ws.json` files
  */
@@ -45,6 +57,8 @@ export interface WorkspaceMeta{
 
     createdAt:number;
     lastOpened:number;
+
+    perm:WorkspacePermissionConfig;
 }
 
 export interface WorkspacePermissions{

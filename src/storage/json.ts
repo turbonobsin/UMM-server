@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import { userFile } from "./paths";
 import { loadUser } from "../core/users";
+import { UserMeta } from "../types/core_types";
 
 export type CacheItem = any;
 
@@ -24,7 +25,7 @@ export async function saveJSON(path:string,data:CacheItem){
     await fs.writeFile(path,JSON.stringify(data,null,2));
 }
 
-export async function getUser(username:string){
+export async function getUser(username:string):Promise<UserMeta>{
     const p = userFile(username);
     if(cache.has(p)) return cache.get(p);
 
