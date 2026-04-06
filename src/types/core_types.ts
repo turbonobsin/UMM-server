@@ -20,6 +20,12 @@ export interface UserMeta{
         username:string;
     }[];
 
+    externalWorkspaces:{
+        owner:string; // username
+        wid:string;
+        // should we also store icon data just for quick show?
+    }[];
+
     // lastWSId?:string; // <-- probably will be stored by the client
 }
 

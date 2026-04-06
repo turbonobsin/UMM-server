@@ -9,11 +9,12 @@ const cache = new Map<string,CacheItem>();
 /**
  * @throws
  */
-export async function loadJSON<T>(path:string): Promise<T>{
+export async function loadJSON<T>(path:string,onNew?:(data:T,path:string)=>Promise<void>): Promise<T>{
     if(cache.has(path)) return cache.get(path);
 
     const raw = await fs.readFile(path,"utf8");
     const data = JSON.parse(raw);
+    if(onNew) await onNew(data,path);
     cache.set(path,data);
     return data;
 }

@@ -1,8 +1,10 @@
 import { Server, Socket } from "socket.io";
 import { verifyToken } from "../core/tokens";
-import { createSession, deleteSession } from "../core/sessions";
+import { _getSessions, createSession, deleteSession } from "../core/sessions";
 import { deleteFile, fileExists, readBinary, writeBinary, writeFolder } from "../core/files";
 import { CB } from "../types/core_types";
+import { _getFileMap, registerCloseFile, registerOpenFile, removeSessionFromAllFiles } from "../core/fileRegistry";
+import { prepareRestart } from "./restart";
 
 type WorkspaceOpData = {
     owner:string;
@@ -53,7 +55,39 @@ export function attachSocketIO(httpServer:Express.Application){
         console.log("connection",socket.session.username);
 
         socket.on("disconnect",()=>{
+            removeSessionFromAllFiles(socket.session);
             deleteSession(socket.id);
+        });
+
+        socket.on("restart",()=>{
+            if(socket.session.username == "claeb_") prepareRestart(io); // <-- for now lol
+        });
+        socket.on("status",()=>{
+            const fileMap = _getFileMap();
+            console.log("getting status...",fileMap.size);
+            console.log("\n------ FILES");
+            for(const entry of fileMap.values()){
+                console.log(entry.path);
+                console.log([...entry.sessions].map(v=>{
+                    return " - "+v.username;
+                    return {
+                        // openFiles:Object.keys(v.openFiles),
+                        // username:v.username,
+                        // created:new Date(v.createdAt).toLocaleString([],{dateStyle:"short",timeStyle:"short"})
+                    };
+                }));
+                console.log("");
+            }
+
+            console.log("\n\n------ SESSIONS");
+            const sessions = _getSessions();
+            for(const v of sessions.values()){
+                console.log({
+                    openFiles:Object.keys(v.openFiles).map(w=>{return{name:w,...v.openFiles[w]}}),
+                    username:v.username,
+                    created:new Date(v.createdAt).toLocaleString([],{dateStyle:"short",timeStyle:"short"})
+                });
+            }
         });
 
         // FILES
@@ -96,6 +130,27 @@ export function attachSocketIO(httpServer:Express.Application){
         });
         socket.on("closeFile",async ()=>{
 
+        });
+
+        // 
+
+        workspaceOp(socket,"file:open",async (data:WorkspaceOpData & {saved?:boolean})=>{
+            socket.session.openFiles[data.path] = {
+                lastSaved:-1,
+                saved:data.saved ?? true
+            };
+            registerOpenFile(socket.session,data.owner,data.wid,data.path);
+        });
+        workspaceOp(socket,"file:close",async (data)=>{
+            delete socket.session.openFiles[data.path];
+            registerCloseFile(socket.session,data.owner,data.wid,data.path);
+        });
+        workspaceOp(socket,"file:saveChange",async (data:WorkspaceOpData & {saved?:boolean})=>{
+            const v = socket.session.openFiles[data.path];
+            v.saved = data.saved ?? false;
+        });
+        workspaceOp(socket,"file:view",async (data:WorkspaceOpData & {saved?:boolean})=>{
+            
         });
 
         // 

@@ -88,7 +88,13 @@ export async function loadWorkspace(username:string,wid:string,fromUsername:stri
         if(!perm.view) throw new Error("You don't have the *view* permission for this workspace");
     }
 
-    return loadJSON<WorkspaceMeta>(workspaceMeta(username,wid));
+    return loadJSON<WorkspaceMeta>(workspaceMeta(username,wid),async (data,path)=>{
+        data.lastOpened = Date.now();
+        try{
+            await saveJSON(path,data);
+        }
+        catch{}
+    });
 }
 
 export async function updateWorkspaceMeta(username:string,wid:string,fromUsername:string|undefined,updates:Partial<WorkspaceMeta>){

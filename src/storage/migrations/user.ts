@@ -7,6 +7,8 @@ export function migrateUser(data:UserMeta): UserMeta{
         data.displayName = data.displayName ?? data.username;
         data.v = 1;
     }
+
+    data.externalWorkspaces ??= []; // ehh
     
     return data;
 }
