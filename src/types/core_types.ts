@@ -73,3 +73,97 @@ export type Result<T> = [{
     msg:string;
 },undefined] | [undefined,T];
 export type CB = (res:Result<any>)=>void;
+
+export type BlockStateType = {
+    parBid:number; // <-- for future use to create the temp parent block if the children were sent to get created before the parent, then when the parent is added check for temp blocks created and move them from there to here, and delete the temp!!
+    parI:number;
+    
+    bid:number;
+    block:any; // <-- the serialize base data
+    t:number;
+};
+export type Ret_M_SetBlockState = {
+    t:number;
+    owner:string;
+    wid:string;
+    by:string;
+    path:string; // <-- which file is it in
+    states:BlockStateType[];
+    // for history system to just run
+    states2:HistChange[];
+};
+export type Ret_M_AddChange = {
+    owner:string;
+    wid:string;
+    by:string;
+    path:string; // <-- which file is it in
+
+    t:number;
+    change:HistChange;
+    way:"undo"|"redo";
+    preStates?:[number,CommonSerializedData][];
+};
+
+// Serialization
+
+export type BlockCommonSerializedData = {
+    _: string; // id/type
+    d: any; // data for this type
+    c?: number[]; // list of children IN ORDER
+
+    ind?: number; // indent, nil for 0
+    indType?: number;
+    indI?: number;
+    indC?: boolean;
+
+    // c?:Record<number,BlockCommonSerializedData|PartCommonSerializedData>; // list of children
+    // c?:(BlockCommonSerializedData|PartCommonSerializedData)[]; // list of children
+};
+export type PartCommonSerializedData = {
+    _p: string;
+    d: any;
+};
+export type CommonSerializedData = BlockCommonSerializedData | PartCommonSerializedData;
+
+// History
+
+type CommonHistChange = {
+    // mode:Omit<HistChangeMode,"create">;
+    bid:number;
+    state:CommonSerializedData; // object representing the serialized state of a block after the change has been made
+};
+// export type HistChange = CommonHistChange | (CommonHistChange & {
+//     mode:"create";
+//     parBid:number;
+//     ind:number; // index in the list of parent's children that it was inserted
+// });
+
+export type ModifyHistChange = CommonHistChange & {
+    mode:"modify";
+};
+export type CreateHistChange = CommonHistChange & {
+    mode:"create";
+    parBid:number;
+    ind:number; // index in the list of parent's children that it was inserted
+};
+export type RemoveHistChange = CommonHistChange & {
+    mode:"remove";
+    parBid:number;
+    ind:number; // <-- remove needs to know this information too bc when undoing a remove it's actually a create
+};
+export type MoveHistChange = CommonHistChange & {
+    mode:"move";
+    oldParBid:number;
+    oldInd:number;
+    parBid:number;
+    ind:number;
+};
+export type CustomHistChange<T> = CommonHistChange & {
+    mode:"custom";
+    preState:T; // just stray data to store in order to UNDO
+    // state:T; // stray data to REDO
+    undo:()=>void;
+    redo:()=>void;
+};
+
+export type HistChange = ModifyHistChange | CreateHistChange | RemoveHistChange | MoveHistChange | CustomHistChange<any>;

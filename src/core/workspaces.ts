@@ -102,7 +102,7 @@ export async function listWorkspaces(username:string):Promise<WorkspaceMeta[]>{
 export async function loadWorkspace(username:string,wid:string,fromUsername:string|undefined){
     if(fromUsername != undefined){
         let perm = await getWorkspacePermissions(username,wid,fromUsername);
-        if(!perm.view) throw new Error("You don't have the *view* permission for this workspace");
+        if(!perm?.view) throw new Error("You don't have the *view* permission for this workspace");
     }
 
     return migrateWorkspace(await loadJSON<WorkspaceMeta>(workspaceMeta(username,wid),async (data,path)=>{
@@ -120,7 +120,7 @@ export async function loadWorkspace(username:string,wid:string,fromUsername:stri
 export async function updateWorkspaceMeta(username:string,wid:string,fromUsername:string|undefined,updates:Partial<WorkspaceMeta>){
     if(fromUsername != undefined){
         let perm = await getWorkspacePermissions(username,wid,fromUsername);
-        if(!perm.edit) throw new Error("You don't have the *edit* permission for this workspace");
+        if(!perm?.edit) throw new Error("You don't have the *edit* permission for this workspace");
     }
     
     const metaPath = workspaceMeta(username,wid);
@@ -149,6 +149,7 @@ export async function updateWorkspaceMeta(username:string,wid:string,fromUsernam
 export async function getWorkspacePermissions(ownerUsername:string,wid:string,openerUsername:string){
     const ws = await loadWorkspace(ownerUsername,wid,undefined); // <-- we want to get it temp to check (server authority)
     if(!ws) throw new Error("Workspace didn't exist");
+    // if(!ws) return undefined;
 
     let perm:WorkspacePermissions = {
         edit:false,

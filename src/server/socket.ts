@@ -2,11 +2,12 @@ import { Server, Socket } from "socket.io";
 import { verifyToken } from "../core/tokens";
 import { _getSessions, createSession, deleteSession } from "../core/sessions";
 import { deleteFile, fileExists, readBinary, writeBinary, writeFolder } from "../core/files";
-import { CB } from "../types/core_types";
-import { _getFileMap, registerCloseFile, registerOpenFile, removeSessionFromAllFiles } from "../core/fileRegistry";
+import { BlockStateType, CB, CommonSerializedData, HistChange, Ret_M_AddChange, Ret_M_SetBlockState } from "../types/core_types";
+import { _getFileMap, registerCloseFile, registerOpenFile, removeSessionFromAllFiles, wsKey } from "../core/fileRegistry";
 import { prepareRestart } from "./restart";
 import { getUser, saveJSON } from "../storage/json";
 import { loadUser, updateUser } from "../core/users";
+import { getWorkspacePermissions, loadWorkspace } from "../core/workspaces";
 
 type WorkspaceOpData = {
     owner:string;
@@ -134,6 +135,62 @@ export function attachSocketIO(httpServer:Express.Application){
 
         });
 
+        // Multiplayer
+
+        // workspaceOp(socket,"m_setBlockState",async (data:WorkspaceOpData & {timestamp?:number,states?:BlockStateType[]})=>{
+        workspaceOp(socket,"m_setBlockState",async (data:WorkspaceOpData & {t?:number,states2?:HistChange[]})=>{
+            console.log("-- m_setBlockState",data.t,data.states2);
+            
+            if(data.t == undefined) return;
+            if(!data.states2) return;
+            if(data.states2.length == 0) return;
+
+            const perm = await getWorkspacePermissions(data.owner,data.wid,socket.session.username);
+            if(!perm?.edit) throw new Error("No permission to edit");
+            const w = await loadWorkspace(data.owner,data.wid,socket.session.username);
+            if(!w) throw new Error("Can't find workspace");
+
+            // for now...
+            const room = "file:"+wsKey(data.owner,data.wid,data.path);
+            socket.to(room).emit("m_setBlockState",{
+                t:data.t,
+                owner:data.owner,
+                wid:data.wid,
+                by:socket.session.username,
+                // states:data.states,
+                states:[],
+                path:data.path,
+                states2:data.states2
+            } satisfies Ret_M_SetBlockState);
+        }); 
+        workspaceOp(socket,"m_addChange",async (data:WorkspaceOpData & {t?:number,change?:HistChange,way?:"undo"|"redo",preStates?:[number,CommonSerializedData][]})=>{
+            console.log("-- m_addChange",data.t,data.change);
+            
+            if(data.t == undefined) return;
+            if(!data.change) return;
+            if(data.way == undefined) data.way = "redo"; // redo is normal way
+            if(!data.preStates) data.preStates = [];
+
+            const perm = await getWorkspacePermissions(data.owner,data.wid,socket.session.username);
+            if(!perm?.edit) throw new Error("No permission to edit");
+            const w = await loadWorkspace(data.owner,data.wid,socket.session.username);
+            if(!w) throw new Error("Can't find workspace");
+
+            // for now...
+            const room = "file:"+wsKey(data.owner,data.wid,data.path);
+            socket.to(room).emit("m_addChange",{
+                owner:data.owner,
+                wid:data.wid,
+                by:socket.session.username,
+                path:data.path,
+
+                t:data.t,
+                change:data.change,
+                way:data.way,
+                preStates:data.preStates
+            } satisfies Ret_M_AddChange);
+        });
+
         // 
 
         workspaceOp(socket,"openWorkspace",async (data:WorkspaceOpData)=>{
@@ -155,10 +212,14 @@ export function attachSocketIO(httpServer:Express.Application){
                 saved:data.saved ?? true
             };
             registerOpenFile(socket.session,data.owner,data.wid,data.path);
+
+            socket.join("file:"+wsKey(data.owner,data.wid,data.path));
         });
         workspaceOp(socket,"file:close",async (data)=>{
             delete socket.session.openFiles[data.path];
             registerCloseFile(socket.session,data.owner,data.wid,data.path);
+
+            socket.leave("file:"+wsKey(data.owner,data.wid,data.path));
         });
         workspaceOp(socket,"file:saveChange",async (data:WorkspaceOpData & {saved?:boolean})=>{
             const v = socket.session.openFiles[data.path];

@@ -61,7 +61,7 @@ router.get("/me",auth,async (req:Request,res)=>{
         // res.json({session:req.session});
     }
     catch(err:any){
-        res.status(500).send(err);
+        res.status(400).send(err);
     }
 });
 

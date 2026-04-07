@@ -17,12 +17,12 @@ export function _getFileMap(){
     return fileMap;
 }
 
-function key(owner:string,wid:string,path:string){
+export function wsKey(owner:string,wid:string,path:string){
     return `${owner}:${wid}:${path}`;
 }
 
 export function registerOpenFile(session:Session,owner:string,wid:string,path:string){
-    const k = key(owner,wid,path);
+    const k = wsKey(owner,wid,path);
 
     let entry = fileMap.get(k);
     if(!entry){
@@ -38,7 +38,7 @@ export function registerOpenFile(session:Session,owner:string,wid:string,path:st
 }
 
 export function registerCloseFile(session:Session,owner:string,wid:string,path:string){
-    const k = key(owner,wid,path);
+    const k = wsKey(owner,wid,path);
     const entry = fileMap.get(k);
     if(!entry) return;
 
@@ -49,7 +49,7 @@ export function registerCloseFile(session:Session,owner:string,wid:string,path:s
 }
 
 export function getSessionsForFile(owner:string,wid:string,path:string){
-    const k = key(owner,wid,path);
+    const k = wsKey(owner,wid,path);
     const entry = fileMap.get(k);
     return entry ? [...entry.sessions] : [];
 }
