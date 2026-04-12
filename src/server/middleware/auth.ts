@@ -6,7 +6,10 @@ export function auth(req:Request,res:Response,next:NextFunction){
     if(!sid || typeof sid != "string") return res.status(401).send("Missing session ID");
 
     const session = getSession(sid);
-    if(!session) return res.status(401).send("Invalid or expired session");
+    if(!session){
+        console.log("- user has invalid or expired session");
+        return res.status(401).send("Invalid or expired session");
+    }
     
     req.session = session;
     next();

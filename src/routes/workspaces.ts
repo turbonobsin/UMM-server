@@ -1,13 +1,14 @@
 import { Request, Router } from "express";
 import { auth } from "../server/middleware/auth";
 import { createWorkspace, getWorkspacePermissions, listWorkspaces, loadWorkspace, updateWorkspaceMeta } from "../core/workspaces";
-import { checkPath, isStr, queryOrDefault, valStr, workspaceDir } from "../storage/paths";
-import { WorkspacePermissions } from "../types/core_types";
+import { checkPath, isStr, queryOrDefault, valStr, workspaceDir, workspaceMeta } from "../storage/paths";
+import { WorkspaceMeta, WorkspacePermissions } from "../types/core_types";
 import fs from "fs/promises";
-import { resolveWorkspacePath, validatePath } from "../core/files";
+import { readJSON, resolveWorkspacePath, validatePath } from "../core/files";
 import express from "express";
 import { join } from "path";
 import { getSession } from "../core/sessions";
+import { loadJSON } from "../storage/json";
 
 const router = Router();
 
@@ -163,6 +164,72 @@ router.get("/file/:uid/:wid",async (req:Request,res)=>{
     if(!perm.view) return res.status(403).send("No permission to view");
     
     res.sendFile(join(workspaceDir(uid,wid),path));
+});
+
+router.get("/workspace/:uid/:wid/meta",auth,async (req:Request,res)=>{
+    if(!req.session) return;
+
+    const username = queryOrDefault(req.params.uid,"");
+    const wid = queryOrDefault(req.params.wid,"");
+
+    if(username != req.session.username){
+        // vvv - currently can only edit these things if you are the owner
+        return res.status(401).send("You must be the owner to view workspace meta");
+    }
+
+    if(!username || !wid){
+        return res.status(400).send("Invalid data");
+    }
+
+    try{
+        const metaPath = workspaceMeta(username,wid);
+        const json = await loadJSON<WorkspaceMeta>(metaPath);
+
+        res.status(200).send({
+            meta:json
+        });
+    }
+    catch(e:any){
+        res.status(400).send(e.message);
+    }
+});
+
+router.patch("/workspace/:uid/:wid/meta",auth,async (req:Request,res)=>{
+    if(!req.session) return;
+
+    const username = queryOrDefault(req.params.uid,"");
+    const wid = queryOrDefault(req.params.wid,"");
+    const custom = req.body.custom as Partial<WorkspaceMeta>;
+
+    if(username != req.session.username){
+        // vvv - currently can only edit these things if you are the owner
+        return res.status(401).send("You must be the owner to view workspace meta");
+    }
+
+    if(!username || !wid || !custom || typeof custom != "object"){
+        return res.status(400).send("Invalid data");
+    }
+
+    try{
+        const metaPath = workspaceMeta(username,wid);
+        let json = await loadJSON<WorkspaceMeta>(metaPath);
+
+        // const keys = Object.keys(custom);
+        // for(const k of keys){
+        //     (json as any)[k] = k;
+        // }
+        json = { // <-- TODO: probably good enough for now, you have the rights over the file, even if you break it
+            ...custom,
+            ...json
+        };
+
+        res.status(200).send({
+            meta:json
+        });
+    }
+    catch(e:any){
+        res.status(400).send(e.message);
+    }
 });
 
 export default router;
