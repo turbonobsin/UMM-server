@@ -8,7 +8,7 @@ import { readJSON, resolveWorkspacePath, validatePath } from "../core/files";
 import express from "express";
 import { join } from "path";
 import { getSession } from "../core/sessions";
-import { loadJSON } from "../storage/json";
+import { loadJSON, saveJSON } from "../storage/json";
 
 const router = Router();
 
@@ -219,9 +219,11 @@ router.patch("/workspace/:uid/:wid/meta",auth,async (req:Request,res)=>{
         //     (json as any)[k] = k;
         // }
         json = { // <-- TODO: probably good enough for now, you have the rights over the file, even if you break it
+            ...json,
             ...custom,
-            ...json
         };
+
+        await saveJSON(metaPath,json);
 
         res.status(200).send({
             meta:json
