@@ -8,6 +8,7 @@ import { prepareRestart } from "./restart";
 import { getUser, saveJSON } from "../storage/json";
 import { loadUser, updateUser } from "../core/users";
 import { getWorkspacePermissions, loadWorkspace } from "../core/workspaces";
+import { valStr } from "../storage/paths";
 
 type WorkspaceOpData = {
     owner:string;
@@ -163,18 +164,25 @@ export function attachSocketIO(httpServer:Express.Application){
                 states2:data.states2
             } satisfies Ret_M_SetBlockState);
         }); 
-        workspaceOp(socket,"m_addChange",async (data:WorkspaceOpData & {t?:number,change?:HistChange,way?:"undo"|"redo",preStates?:[number,CommonSerializedData][]})=>{
-            console.log("-- m_addChange",data.t,data.change);
+        workspaceOp(socket,"m_addChange",async (data:WorkspaceOpData & {t?:number,change?:HistChange,way?:"undo"|"redo",preStates?:[number,CommonSerializedData][],id?:string,lastId?:string})=>{
+            console.log("-- m_addChange",data.t,data.change,data.id);
             
             if(data.t == undefined) return;
             if(!data.change) return;
             if(data.way == undefined) data.way = "redo"; // redo is normal way
             if(!data.preStates) data.preStates = [];
+            if(!valStr(data.id)) throw new Error("Id's not valid or missing");
 
             const perm = await getWorkspacePermissions(data.owner,data.wid,socket.session.username);
             if(!perm?.edit) throw new Error("No permission to edit");
             const w = await loadWorkspace(data.owner,data.wid,socket.session.username);
             if(!w) throw new Error("Can't find workspace");
+
+            await new Promise<void>(resolve=>{
+                setTimeout(()=>{
+                    resolve();
+                },Math.ceil(Math.random()*1000));
+            });
 
             // for now...
             const room = "file:"+wsKey(data.owner,data.wid,data.path);
@@ -187,7 +195,9 @@ export function attachSocketIO(httpServer:Express.Application){
                 t:data.t,
                 change:data.change,
                 way:data.way,
-                preStates:data.preStates
+                preStates:data.preStates,
+                id:data.id,
+                lastId:data.lastId
             } satisfies Ret_M_AddChange);
         });
 

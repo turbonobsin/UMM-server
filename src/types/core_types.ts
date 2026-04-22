@@ -102,6 +102,9 @@ export type Ret_M_AddChange = {
     change:HistChange;
     way:"undo"|"redo";
     preStates?:[number,CommonSerializedData][];
+
+    id:string;
+    lastId?:string;
 };
 
 // Serialization
@@ -115,6 +118,9 @@ export type BlockCommonSerializedData = {
     indType?: number;
     indI?: number;
     indC?: boolean;
+
+    tc:number; // time created
+    tm:number; // time modified
 
     // c?:Record<number,BlockCommonSerializedData|PartCommonSerializedData>; // list of children
     // c?:(BlockCommonSerializedData|PartCommonSerializedData)[]; // list of children
