@@ -178,11 +178,11 @@ export function attachSocketIO(httpServer:Express.Application){
             const w = await loadWorkspace(data.owner,data.wid,socket.session.username);
             if(!w) throw new Error("Can't find workspace");
 
-            await new Promise<void>(resolve=>{
-                setTimeout(()=>{
-                    resolve();
-                },Math.ceil(Math.random()*1000));
-            });
+            // await new Promise<void>(resolve=>{
+            //     setTimeout(()=>{
+            //         resolve();
+            //     },Math.ceil(Math.random()*1000));
+            // });
 
             // for now...
             const room = "file:"+wsKey(data.owner,data.wid,data.path);
