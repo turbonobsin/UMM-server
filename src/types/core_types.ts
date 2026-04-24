@@ -106,6 +106,21 @@ export type Ret_M_AddChange = {
     id:string;
     lastId?:string;
 };
+export type Ret_M_CheckUpdateType = {
+    bid:number;
+    type:"remove";
+} | {
+    bid:number;
+    type:"data";
+    state:CommonSerializedData;
+
+    parBid:number;
+    ind:number;
+};
+
+export type Ret_M_CheckUpdate = {
+    list:Ret_M_CheckUpdateType[];
+};
 
 // Serialization
 
@@ -128,8 +143,18 @@ export type BlockCommonSerializedData = {
 export type PartCommonSerializedData = {
     _p: string;
     d: any;
+
+    tc:number; // time created
+    tm:number; // time modified
 };
 export type CommonSerializedData = BlockCommonSerializedData | PartCommonSerializedData;
+export type CommonBlockStateData = {
+    bid:number;
+    state:CommonSerializedData;
+
+    parBid:number;
+    ind:number;
+};
 
 // History
 

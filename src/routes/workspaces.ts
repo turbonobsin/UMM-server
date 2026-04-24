@@ -1,6 +1,6 @@
 import { Request, Router } from "express";
 import { auth } from "../server/middleware/auth";
-import { createWorkspace, getWorkspacePermissions, listWorkspaces, loadWorkspace, updateWorkspaceMeta } from "../core/workspaces";
+import { createWorkspace, getTmpFile, getWorkspacePermissions, listWorkspaces, loadWorkspace, updateWorkspaceMeta } from "../core/workspaces";
 import { checkPath, isStr, queryOrDefault, valStr, workspaceDir, workspaceMeta } from "../storage/paths";
 import { WorkspaceMeta, WorkspacePermissions } from "../types/core_types";
 import fs from "fs/promises";
@@ -164,6 +164,26 @@ router.get("/file/:uid/:wid",async (req:Request,res)=>{
     if(!perm.view) return res.status(403).send("No permission to view");
     
     res.sendFile(join(workspaceDir(uid,wid),path));
+});
+
+router.get("/file/:uid/:wid/viewers",auth,async (req:Request,res)=>{
+    if(!req.session) return;
+    
+    const uid = queryOrDefault(req.params.uid,"");
+    const wid = queryOrDefault(req.params.wid,"");
+    const path = queryOrDefault(req.query.path,"");
+
+    if(!uid || !wid || !path || !checkPath(uid) || !checkPath(wid) || !checkPath(path)) return res.status(400).send("Invalid data");
+
+    const perm = await getWorkspacePermissions(uid,wid,req.session.username);
+    if(!perm.view) return res.status(403).send("No permission to view");
+
+    const f = getTmpFile(uid,wid,path);
+    if(!f) return res.status(404).send("File data not found");
+
+    res.status(200).send({
+        viewers:[...f.viewers]
+    });
 });
 
 router.get("/workspace/:uid/:wid/meta",auth,async (req:Request,res)=>{

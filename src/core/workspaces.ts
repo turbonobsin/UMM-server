@@ -1,6 +1,6 @@
 import { genId } from "../storage/ids";
 import { userDir, workspaceDir, workspaceMeta } from "../storage/paths";
-import { IconData, WorkspaceMeta as WorkspaceMeta, WorkspacePermissions } from "../types/core_types";
+import { CommonBlockStateData, CommonSerializedData, IconData, WorkspaceMeta as WorkspaceMeta, WorkspacePermissions } from "../types/core_types";
 import fs from "fs/promises";
 import { loadUser, userExists } from "./users";
 import { loadJSON, saveJSON } from "../storage/json";
@@ -59,6 +59,22 @@ export async function createWorkspace(data:Partial<WorkspaceMeta> & {username:st
 
     await saveJSON(workspaceMeta(username,wid),meta);
     return meta;
+}
+
+export async function getWorkspaceNames(owner:string){
+    const user = await loadUser(owner);
+    if(!user) return [];
+
+    const userWorkspaces = join(userDir(owner),"workspaces");
+
+    let dirs:string[];
+    try{
+        dirs = await fs.readdir(userWorkspaces);
+        return dirs;
+    }
+    catch{
+        return [];
+    }
 }
 
 export async function listWorkspaces(username:string):Promise<WorkspaceMeta[]>{
@@ -195,3 +211,56 @@ export async function getWorkspacePermissions(ownerUsername:string,wid:string,op
 export async function canOpenWorkspace(ownerUsername:string,wid:string,openerUsername:string){
     return (await getWorkspacePermissions(ownerUsername,wid,openerUsername)).view;
 }
+
+// TMP workpace file temp data cache
+
+type FileTmpData = {
+    path:string;
+
+    wid:string;
+    owner:string;
+
+    doc:{
+        blocks:Map<number,CommonBlockStateData>;
+    };
+
+    viewers:Set<string>;
+} 
+class FileTmpDataCache{
+    map = new Map<string,{
+        files:Map<string,FileTmpData>;
+    }>();
+}
+export function getTmpFile(owner:string,wid:string,path:string){
+    let id = `${owner}_${wid}`;
+    let dat = fileTmpData.map.get(id);
+
+    if(!dat){
+        dat = {
+            files:new Map()
+        };
+        fileTmpData.map.set(id,dat);
+    }
+
+    let file = dat.files.get(path);
+    
+    if(!file){
+        file = {
+            owner,
+            wid,
+            path,
+            doc:{
+                blocks:new Map()
+            },
+            viewers:new Set()
+        };
+        dat.files.set(path,file);
+    }
+
+    return file;
+}
+export function removeTmpFilesForWS(owner:string,wid:string){
+    let id = `${owner}_${wid}`;
+    fileTmpData.map.delete(id);
+}
+export const fileTmpData = new FileTmpDataCache();
