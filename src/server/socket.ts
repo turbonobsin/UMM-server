@@ -204,7 +204,7 @@ export function attachSocketIO(httpServer:Express.Application){
             if(!w) throw new Error("Can't find workspace");
 
             // DEBUG: super slowdown for requests
-            await new Promise<void>(resolve=>{
+            if(false) await new Promise<void>(resolve=>{
                 setTimeout(()=>{
                     resolve();
                 },Math.ceil(Math.random()*1000));
