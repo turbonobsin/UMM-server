@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 import { verifyToken } from "../core/tokens";
 import { _getSessions, createSession, deleteSession } from "../core/sessions";
 import { deleteFile, fileExists, readBinary, writeBinary, writeFolder } from "../core/files";
-import { BlockStateType, CB, CommonSerializedData, HistChange, Ret_M_AddChange, Ret_M_CheckUpdate, Ret_M_CheckUpdateType, Ret_M_SetBlockState } from "../types/core_types";
+import { BlockStateType, CB, CommonSerializedData, ServerCursorLoc, HistChange, Ret_M_AddChange, Ret_M_CheckUpdate, Ret_M_CheckUpdateType, Ret_M_SetBlockState } from "../types/core_types";
 import { _getFileMap, registerCloseFile, registerOpenFile, removeSessionFromAllFiles, wsKey } from "../core/fileRegistry";
 import { prepareRestart } from "./restart";
 import { getUser, saveJSON } from "../storage/json";
@@ -186,7 +186,7 @@ export function attachSocketIO(httpServer:Express.Application){
                 states2:data.states2
             } satisfies Ret_M_SetBlockState);
         }); 
-        workspaceOp(socket,"m_addChange",async (data:WorkspaceOpData & {t?:number,change?:HistChange,way?:"undo"|"redo",preStates?:[number,CommonSerializedData][],id?:string,lastId?:string,parBid?:number,ind?:number})=>{
+        workspaceOp(socket,"m_addChange",async (data:WorkspaceOpData & {t?:number,change?:HistChange,way?:"undo"|"redo",preStates?:[number,CommonSerializedData][],id?:string,lastId?:string,parBid?:number,ind?:number,loc?:ServerCursorLoc})=>{
             console.log("-- m_addChange",data.t,data.change,data.id);
             
             if(data.t == undefined) return;
@@ -194,6 +194,8 @@ export function attachSocketIO(httpServer:Express.Application){
             if(data.way == undefined) data.way = "redo"; // redo is normal way
             if(!data.preStates) data.preStates = [];
             if(!valStr(data.id)) throw new Error("Id's not valid or missing");
+            if(!data.loc) throw new Error("Cursor loc missing");
+            if(data.loc.partBid == undefined || data.loc.partSi == undefined) throw new Error("Cursor loc invalid");
 
             if(data.parBid == undefined) throw new Error("missing parBid");
             if(data.ind == undefined) throw new Error("missing ind");
@@ -247,7 +249,9 @@ export function attachSocketIO(httpServer:Express.Application){
                 way:data.way,
                 preStates:data.preStates,
                 id:data.id,
-                lastId:data.lastId
+                lastId:data.lastId,
+
+                loc:data.loc,
             } satisfies Ret_M_AddChange);
         });
         workspaceOp<Ret_M_CheckUpdate>(socket,"m_checkUpdate",async (data:WorkspaceOpData & {

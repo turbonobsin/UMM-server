@@ -92,6 +92,17 @@ export type Ret_M_SetBlockState = {
     // for history system to just run
     states2:HistChange[];
 };
+export type ServerCursorLoc = {
+    partBid:number;
+    partSi:number;
+    tmpSel?:{
+        sBid:number;
+        eBid:number;
+        sI:number;
+        eI:number;
+        rev:boolean;
+    };
+};
 export type Ret_M_AddChange = {
     owner:string;
     wid:string;
@@ -105,6 +116,8 @@ export type Ret_M_AddChange = {
 
     id:string;
     lastId?:string;
+
+    loc:ServerCursorLoc;
 };
 export type Ret_M_CheckUpdateType = {
     bid:number;
