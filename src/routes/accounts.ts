@@ -81,4 +81,8 @@ router.patch("/user/update",auth,async (req:Request,res)=>{
     }
 });
 
+router.get("/ping",async (req:Request,res)=>{
+    res.status(200).send();
+});
+
 export default router;
